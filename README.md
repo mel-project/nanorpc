@@ -2,7 +2,7 @@
 
 `nanorpc` implements a subset of JSON-RPC 2.0, notably with the lack of no-response "notifications" and lack of negative-value error codes.
 
-The most interesting part of `nanorpc` is that it contains a derive macro, `#\[derive(RpcService)\]`, that given a trait that describes the server-side behavior of an RPC service, derives both raw JSON-RPC handlers and a client implementation:
+The most interesting part of `nanorpc` is that it contains a derive macro, `#[derive(RpcService)]`, that given a trait that describes the server-side behavior of an RPC service, derives both raw JSON-RPC handlers and a client implementation:
 
 ```rust
 #[derive(RpcService)]
