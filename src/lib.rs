@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+pub use nanorpc_derive::nanorpc;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -53,7 +54,7 @@ pub trait RpcService {
     async fn respond(
         &self,
         method: &str,
-        params: &[serde_json::Value],
+        params: Vec<serde_json::Value>,
     ) -> Option<Result<serde_json::Value, ServerError>>;
 
     /// Responds to a raw JSON-RPC request, returning a raw JSON-RPC response.
@@ -69,7 +70,7 @@ pub trait RpcService {
                     data: serde_json::Value::Null,
                 }),
             }
-        } else if let Some(response) = self.respond(&jrpc_req.method, &jrpc_req.params).await {
+        } else if let Some(response) = self.respond(&jrpc_req.method, jrpc_req.params).await {
             match response {
                 Ok(response) => JrpcResponse {
                     id: jrpc_req.id,

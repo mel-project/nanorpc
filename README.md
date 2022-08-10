@@ -2,28 +2,35 @@
 
 `nanorpc` implements a subset of JSON-RPC 2.0, notably with the lack of no-response "notifications" and lack of negative-value error codes.
 
-The most interesting part of `nanorpc` is that it contains a derive macro, `#[derive(RpcService)]`, that given a trait that describes the server-side behavior of an RPC service, derives both raw JSON-RPC handlers and a client implementation:
+The most interesting part of `nanorpc` is that it contains a derive macro, `#[nanorpc]`, that given a trait that describes the server-side behavior of an RPC service, derives both raw JSON-RPC handlers and a client implementation:
 
 ```rust
-#[derive(RpcService)]
-pub trait MathService {
+#[nanorpc]
+#[async_trait]
+pub trait MathProtocol {
     /// Adds two numbers
-    fn add(&self, x: f64, y: f64) -> f64
+    async fn add(&self, x: f64, y: f64) -> f64;
     /// Multiplies two numbers
-    fn mult(&self, x: f64, y: f64) -> f64
+    async fn mult(&self, x: f64, y: f64) -> f64;
 }
 
-// Autogenerates a blanket RpcService impl:
-impl <T: MathService> RpcService for T {...}
+// Autogenerates a server struct:
+pub struct MathService<T: MathProtocol>(pub T);
+
+#[async_trait]
+impl <T: MathService> RpcService for MathService<T> {
+    //...
+}
 
 // Autogenerates a client struct like:
 
-pub struct MathServiceClient<T: RpcTransport>(pub T):
+pub struct MathClient<T: RpcTransport>(pub T);
 
-impl <T: RpcTransport> MathServiceClient {
+impl <T: RpcTransport> MathClient {
     /// Adds two numbers
-    pub fn add(&self, x: f64, y: f64) -> Result<f64, T::Error>;
-    ...
+    pub async fn add(&self, x: f64, y: f64) -> Result<f64, T::Error>;
+
+    //...
 }
 ```
 
