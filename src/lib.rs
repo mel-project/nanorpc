@@ -40,7 +40,7 @@ pub struct JrpcError {
 }
 
 /// A server-returned error message. Contains a string description as well as a structured value.
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ServerError {
     pub code: u32,
     pub message: String,
@@ -145,4 +145,78 @@ pub trait RpcTransport {
 
     /// Sends an RPC call to the remote side, as a raw JSON-RPC request, receiving a raw JSON-RPC response.
     async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error>;
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{self as nanorpc, ServerError};
+    use nanorpc::{nanorpc, RpcService};
+
+    #[nanorpc]
+    #[async_trait::async_trait]
+    pub trait MathProtocol {
+        /// Adds two numbers
+        async fn add(&self, x: f64, y: f64) -> f64;
+        /// Multiplies two numbers
+        async fn mult(&self, x: f64, y: f64) -> f64;
+        /// Maybe fails
+        async fn maybe_fail(&self) -> Result<f64, f64>;
+    }
+
+    struct Mather;
+
+    #[async_trait::async_trait]
+    impl MathProtocol for Mather {
+        async fn add(&self, x: f64, y: f64) -> f64 {
+            x + y
+        }
+
+        async fn mult(&self, x: f64, y: f64) -> f64 {
+            x * y
+        }
+
+        async fn maybe_fail(&self) -> Result<f64, f64> {
+            Err(12345.0)
+        }
+    }
+
+    #[test]
+    fn test_notfound_macro() {
+        smol::future::block_on(async move {
+            let service = MathService(Mather);
+            assert_eq!(
+                service
+                    .respond("!nonexistent!", serde_json::from_str("[]").unwrap())
+                    .await,
+                None
+            );
+        });
+    }
+
+    #[test]
+    fn test_simple_macro() {
+        smol::future::block_on(async move {
+            let service = MathService(Mather);
+            assert_eq!(
+                service
+                    .respond("maybe_fail", serde_json::from_str("[]").unwrap())
+                    .await
+                    .unwrap()
+                    .unwrap_err(),
+                ServerError {
+                    code: 1,
+                    message: "12345".into(),
+                    details: 12345.0f64.into()
+                }
+            );
+            assert_eq!(
+                service
+                    .respond("add", serde_json::from_str("[1, 2]").unwrap())
+                    .await
+                    .unwrap()
+                    .unwrap(),
+                serde_json::Value::from(3.0f64)
+            );
+        });
+    }
 }
