@@ -24,9 +24,17 @@ pub fn nanorpc(_: TokenStream, input: TokenStream) -> TokenStream {
         ),
         protocol_name.span(),
     );
+    let error_struct_name = syn::Ident::new(
+        &format!(
+            "{}Error",
+            protocol_name.to_string().trim_end_matches("Protocol")
+        ),
+        protocol_name.span(),
+    );
 
     // Generate the server implementation.
     let mut server_match = quote! {};
+    let mut client_body = quote! {};
     for item in input.items {
         match item {
             TraitItem::Method(inner) => {
@@ -87,17 +95,73 @@ pub fn nanorpc(_: TokenStream, input: TokenStream) -> TokenStream {
 
                 // Do the client
                 let mut client_signature = inner.sig.clone();
-                let original_output = client_signature.output.to_token_stream();
+                let original_output = match &client_signature.output {
+                    ReturnType::Default => quote! {()},
+                    ReturnType::Type(_, t) => t.to_token_stream(),
+                };
                 client_signature.output = ReturnType::Type(
                     syn::Token! [->](client_signature.span()),
                     Box::new(Type::Verbatim(
-                        quote! {::std::result::Result<#original_output, __nrpc_T::Error>},
+                        quote! {::std::result::Result<#original_output, #error_struct_name<__nrpc_T::Error>>},
                     )),
                 );
-                let v = client_signature.to_token_stream().to_string();
-                server_match = quote! {
-                    #server_match
-                    #v => {todo!()}
+                let vec_build = client_signature
+                    .inputs
+                    .iter()
+                    .filter_map(|arg| match arg {
+                        syn::FnArg::Receiver(_) => None,
+                        syn::FnArg::Typed(t) => match t.pat.as_ref() {
+                            syn::Pat::Ident(varname) => {
+                                Some(quote! {__vb.push(::serde_json::to_value(&#varname).unwrap())})
+                            }
+                            v => panic!("wild {:?}", v.to_token_stream()),
+                        },
+                    })
+                    .fold(
+                        quote! {
+                            let mut __vb: ::std::vec::Vec<::serde_json::Value> = ::std::vec::Vec::with_capacity(8);
+                        },
+                        |a, b| quote! {#a; #b},
+                    );
+                let method_name = client_signature.ident.to_string();
+                let return_handler = if is_fallible {
+                    quote! {
+                        match jsval  {
+                            Ok(jsval) => {
+                                let retval = ::serde_json::from_value(jsval).map_err(#error_struct_name::FailedDecode)?;
+                                Ok(Ok(retval))
+                            }
+                            Err(serverr) => {
+                                Ok(Err(::serde_json::from_value(serverr.details).map_err(#error_struct_name::FailedDecode)?))
+                            }
+                        }
+                    }
+                } else {
+                    quote! {
+                        match jsval  {
+                            Ok(jsval) => {
+                                let retval: #original_output = ::serde_json::from_value(jsval).map_err(#error_struct_name::FailedDecode)?;
+                                Ok(retval)
+                            }
+                            Err(serverr) => {
+                                Err(#error_struct_name::ServerFail)
+                            }
+                        }
+                    }
+                };
+                client_body = quote! {
+                    #client_body
+
+                    #client_signature {
+                        #vec_build;
+                        let result = nanorpc::RpcTransport::call(&self.0, #method_name, &__vb).await?;
+                        match result {
+                            None => Err(#error_struct_name::NotFound),
+                            Some(jsval) => {
+                                #return_handler
+                            }
+                        }
+                    }
                 }
             }
             _ => {
@@ -109,6 +173,10 @@ pub fn nanorpc(_: TokenStream, input: TokenStream) -> TokenStream {
     // Generate the client implementation
     let client_impl = quote! {
         pub struct #client_struct_name<T: nanorpc::RpcTransport>(pub T);
+
+        impl <__nrpc_T: nanorpc::RpcTransport + Send + Sync + 'static> #client_struct_name<__nrpc_T> {
+            #client_body
+        }
     };
 
     let assembled = quote! {
@@ -125,6 +193,20 @@ pub fn nanorpc(_: TokenStream, input: TokenStream) -> TokenStream {
                 }
             }
         }
+
+        #[derive(::thiserror::Error, Debug)]
+        pub enum #error_struct_name<T> {
+            #[error("verb not found")]
+            NotFound,
+            #[error("unexpected server error on an infallible verb")]
+            ServerFail,
+            #[error("failed to decode JSON response: {0}")]
+            FailedDecode(::serde_json::Error),
+            #[error("transport-level error: {0}")]
+            Transport(#[from] T)
+        }
+
+        #client_impl
     };
     assembled.into()
 }

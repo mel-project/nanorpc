@@ -31,15 +31,7 @@ impl MathProtocol for Mather {
 fn main() {
     smol::future::block_on(async move {
         let service = MathService(Mather);
-        dbg!(
-            service
-                .respond("maybe_fail", serde_json::from_str("[]").unwrap())
-                .await
-        );
-        dbg!(
-            service
-                .respond("add", serde_json::from_str("[1, 2]").unwrap())
-                .await
-        );
+        let client = MathClient(service);
+        dbg!(client.add(1.0, 2.0).await.unwrap());
     });
 }

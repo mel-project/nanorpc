@@ -19,3 +19,4 @@ serde = {version="1.0.142", features=["derive"]}
 fastrand = "1.8.0"
 nanorpc-derive = { version = "0.1.0", path = "nanorpc-derive" }
 smol = "1.2.5"
+thiserror = "1.0.32"

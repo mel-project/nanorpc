@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use async_trait::async_trait;
 pub use nanorpc_derive::nanorpc;
 use serde::{Deserialize, Serialize};
@@ -48,6 +50,8 @@ pub struct ServerError {
 }
 
 /// A trait that all nanorpc services implement. The only method that needs to be implemented is `respond`.
+///
+/// All types implementing [RpcService] automatically implement [RpcTransport] too; this implementation simply is the trivial transport that talks to a local service.
 #[async_trait]
 pub trait RpcService {
     /// Responds to an RPC call with method `str` and dynamically typed arguments `args`. The service should return `None` to indicate that this method does not exist at all. The internal error type
@@ -145,6 +149,15 @@ pub trait RpcTransport {
 
     /// Sends an RPC call to the remote side, as a raw JSON-RPC request, receiving a raw JSON-RPC response.
     async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error>;
+}
+
+#[async_trait]
+impl<T: RpcService + Sync> RpcTransport for T {
+    type Error = Infallible;
+
+    async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error> {
+        Ok(self.respond_raw(req).await)
+    }
 }
 
 #[cfg(test)]
