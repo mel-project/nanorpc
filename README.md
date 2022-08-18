@@ -5,7 +5,7 @@
 The most interesting part of `nanorpc` is that it contains a derive macro, `#[nanorpc]`, that given a trait that describes the server-side behavior of an RPC service, derives both raw JSON-RPC handlers and a client implementation:
 
 ```rust
-#[nanorpc]
+#[nanorpc_derive]
 #[async_trait]
 pub trait MathProtocol {
     /// Adds two numbers

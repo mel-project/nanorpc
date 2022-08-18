@@ -3,7 +3,10 @@ use quote::{quote, ToTokens};
 use syn::{parse_macro_input, spanned::Spanned, ItemTrait, ReturnType, TraitItem, Type};
 
 #[proc_macro_attribute]
-pub fn nanorpc(_: TokenStream, input: TokenStream) -> TokenStream {
+/// This procedural macro should be put on top of a `async_trait` trait with name ending in `...Protocol`, defining all the function signatures in the RPC protocol. Given a trait of name `FooProtocol`, the macro
+/// - automatically derives an `nanorpc::RpcService` implementation for `FooService`, a generated type that wraps around anything that implements `FooProtocol` --- these would be types that are server implementations of the protocol.
+/// - automatically generates `FooClient`, a client-side struct that wraps a `nanorpc::RpcTransport` and has methods mirroring `FooProtocol`.
+pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as ItemTrait);
     let input_again = input.clone();
     let protocol_name = input.ident;
@@ -152,7 +155,7 @@ pub fn nanorpc(_: TokenStream, input: TokenStream) -> TokenStream {
                 client_body = quote! {
                     #client_body
 
-                    #client_signature {
+                    pub #client_signature {
                         #vec_build;
                         let result = nanorpc::RpcTransport::call(&self.0, #method_name, &__vb).await?;
                         match result {
