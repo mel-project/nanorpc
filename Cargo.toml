@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 repository="https://github.com/themeliolabs/nanorpc"
 license="ISC"
+description="a subset of JSON-RPC 2.0, with magical autogeneration of servers and clients"
 
 [workspace]
 members = [
