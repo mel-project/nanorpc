@@ -1,7 +1,7 @@
 mod comb;
 pub use comb::*;
 
-use std::convert::Infallible;
+use std::{convert::Infallible, sync::Arc};
 
 use async_trait::async_trait;
 pub use nanorpc_derive::nanorpc_derive;
@@ -215,6 +215,15 @@ pub trait RpcTransport: Sync + Send + 'static {
 
     /// Sends an RPC call to the remote side, as a raw JSON-RPC request, receiving a raw JSON-RPC response.
     async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error>;
+}
+
+#[async_trait]
+impl<T: RpcTransport> RpcTransport for Arc<T> {
+    type Error = T::Error;
+
+    async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error> {
+        self.as_ref().call_raw(req).await
+    }
 }
 
 #[async_trait]
