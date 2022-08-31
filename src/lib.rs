@@ -1,5 +1,5 @@
-mod comb;
-pub use comb::*;
+mod utils;
+pub use utils::*;
 
 use std::{convert::Infallible, sync::Arc};
 
@@ -232,6 +232,21 @@ impl<T: RpcService + Sync> RpcTransport for T {
 
     async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error> {
         Ok(self.respond_raw(req).await)
+    }
+}
+
+#[async_trait]
+impl<
+        Fut: std::future::Future<Output = Option<Result<serde_json::Value, ServerError>>> + Send,
+        Fun: Fn(&str, Vec<serde_json::Value>) -> Fut + Send + Sync + 'static,
+    > RpcService for Fun
+{
+    async fn respond(
+        &self,
+        method: &str,
+        params: Vec<serde_json::Value>,
+    ) -> Option<Result<serde_json::Value, ServerError>> {
+        (self)(method, params).await
     }
 }
 
