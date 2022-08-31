@@ -235,21 +235,6 @@ impl<T: RpcService + Sync> RpcTransport for T {
     }
 }
 
-#[async_trait]
-impl<
-        Fut: std::future::Future<Output = Option<Result<serde_json::Value, ServerError>>> + Send,
-        Fun: Fn(&str, Vec<serde_json::Value>) -> Fut + Send + Sync + 'static,
-    > RpcService for Fun
-{
-    async fn respond(
-        &self,
-        method: &str,
-        params: Vec<serde_json::Value>,
-    ) -> Option<Result<serde_json::Value, ServerError>> {
-        (self)(method, params).await
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::{self as nanorpc, ServerError};
