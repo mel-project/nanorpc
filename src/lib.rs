@@ -73,7 +73,6 @@ pub struct ServerError {
 /// }
 /// ```
 ///
-/// All types implementing [`RpcService`] automatically implement [`RpcTransport`] too; this implementation simply is the trivial transport that talks to a local service.
 ///
 /// # Examples
 ///
@@ -220,7 +219,7 @@ pub trait RpcTransport: Sync + Send + 'static {
 }
 
 #[async_trait]
-impl<T: RpcTransport> RpcTransport for Arc<T> {
+impl<T: RpcTransport + ?Sized> RpcTransport for Arc<T> {
     type Error = T::Error;
 
     async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error> {
@@ -229,13 +228,22 @@ impl<T: RpcTransport> RpcTransport for Arc<T> {
 }
 
 #[async_trait]
-impl<T: RpcService + Sync> RpcTransport for T {
-    type Error = Infallible;
+impl<T: RpcTransport + ?Sized> RpcTransport for Box<T> {
+    type Error = T::Error;
 
     async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error> {
-        Ok(self.respond_raw(req).await)
+        self.as_ref().call_raw(req).await
     }
 }
+
+// #[async_trait]
+// impl<T: RpcService + Sync> RpcTransport for T {
+//     type Error = Infallible;
+
+//     async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error> {
+//         Ok(self.respond_raw(req).await)
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
