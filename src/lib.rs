@@ -2,7 +2,7 @@
 mod utils;
 pub use utils::*;
 
-use std::{convert::Infallible, sync::Arc};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 pub use nanorpc_derive::nanorpc_derive;
@@ -178,7 +178,7 @@ pub trait RpcService: Sync + Send + 'static {
 #[async_trait]
 pub trait RpcTransport: Sync + Send + 'static {
     /// This error type represents *transport-level* errors, like communication errors and such.
-    type Error;
+    type Error: Sync + Send + 'static;
 
     /// Sends an RPC call to the remote side, returning the result. `Ok(None)` means that there is no transport-level error, but that the verb does not exist. This generally does not need a manual implementation.
     async fn call(

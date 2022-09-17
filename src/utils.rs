@@ -1,8 +1,38 @@
 use std::{pin::Pin, sync::Arc};
 
+use crate::{JrpcRequest, JrpcResponse, RpcService, RpcTransport, ServerError};
 use async_trait::async_trait;
+use futures_lite::future::Boxed;
 
-use crate::{RpcService, ServerError};
+/// A typed-erased RpcTransport, returning the commonly used dynamically-typed error [anyhow::Error]. Use this type instead of `Box<RpcTransport<...>>` to work around some sharp edges around actual trait objects.
+pub struct DynRpcTransport {
+    raw_caller:
+        Box<dyn Fn(JrpcRequest) -> Boxed<anyhow::Result<JrpcResponse>> + Send + Sync + 'static>,
+}
+
+impl DynRpcTransport {
+    /// Creates a new dynamically-typed RpcTransport.
+    pub fn new<T: RpcTransport>(t: T) -> Self
+    where
+        T::Error: Into<anyhow::Error>,
+    {
+        let t = Arc::new(t);
+        Self {
+            raw_caller: Box::new(move |req| {
+                let t = t.clone();
+                Box::pin(async move { t.call_raw(req).await.map_err(|e| e.into()) })
+            }),
+        }
+    }
+}
+
+#[async_trait]
+impl RpcTransport for DynRpcTransport {
+    type Error = anyhow::Error;
+    async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error> {
+        (self.raw_caller)(req).await
+    }
+}
 
 /// An OrService responds to a call by trying one service then another.
 pub struct OrService<T: RpcService, U: RpcService>(T, U);
