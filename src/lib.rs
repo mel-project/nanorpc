@@ -1,13 +1,15 @@
-mod comb;
-pub use comb::*;
+#[doc = include_str!("../README.md")]
+mod utils;
+pub use utils::*;
 
-use std::{convert::Infallible, sync::Arc};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 pub use nanorpc_derive::nanorpc_derive;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(untagged)]
 /// A raw, JSON-RPC request ID. This should usually never be manually constructed.
 pub enum JrpcId {
     Number(i64),
@@ -71,7 +73,6 @@ pub struct ServerError {
 /// }
 /// ```
 ///
-/// All types implementing [`RpcService`] automatically implement [`RpcTransport`] too; this implementation simply is the trivial transport that talks to a local service.
 ///
 /// # Examples
 ///
@@ -177,7 +178,7 @@ pub trait RpcService: Sync + Send + 'static {
 #[async_trait]
 pub trait RpcTransport: Sync + Send + 'static {
     /// This error type represents *transport-level* errors, like communication errors and such.
-    type Error;
+    type Error: Sync + Send + 'static;
 
     /// Sends an RPC call to the remote side, returning the result. `Ok(None)` means that there is no transport-level error, but that the verb does not exist. This generally does not need a manual implementation.
     async fn call(
@@ -218,7 +219,7 @@ pub trait RpcTransport: Sync + Send + 'static {
 }
 
 #[async_trait]
-impl<T: RpcTransport> RpcTransport for Arc<T> {
+impl<T: RpcTransport + ?Sized> RpcTransport for Arc<T> {
     type Error = T::Error;
 
     async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error> {
@@ -227,13 +228,22 @@ impl<T: RpcTransport> RpcTransport for Arc<T> {
 }
 
 #[async_trait]
-impl<T: RpcService + Sync> RpcTransport for T {
-    type Error = Infallible;
+impl<T: RpcTransport + ?Sized> RpcTransport for Box<T> {
+    type Error = T::Error;
 
     async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error> {
-        Ok(self.respond_raw(req).await)
+        self.as_ref().call_raw(req).await
     }
 }
+
+// #[async_trait]
+// impl<T: RpcService + Sync> RpcTransport for T {
+//     type Error = Infallible;
+
+//     async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error> {
+//         Ok(self.respond_raw(req).await)
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
