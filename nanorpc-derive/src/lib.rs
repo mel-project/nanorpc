@@ -157,7 +157,7 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
 
                     pub #client_signature {
                         #vec_build;
-                        let result = nanorpc::RpcTransport::call(&self.0, #method_name, &__vb).await?;
+                        let result = nanorpc::RpcTransport::call(&self.0, #method_name, &__vb).await.map_err(#error_struct_name::Transport)?;
                         match result {
                             None => Err(#error_struct_name::NotFound),
                             Some(jsval) => {
@@ -206,7 +206,7 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
             #[error("failed to decode JSON response: {0}")]
             FailedDecode(::serde_json::Error),
             #[error("transport-level error: {0}")]
-            Transport(#[from] T)
+            Transport(T)
         }
 
         #client_impl
