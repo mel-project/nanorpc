@@ -41,9 +41,9 @@ pub struct JrpcResponse {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 /// A raw, JSON-RPC error. This should usually never be manually constructed.
 pub struct JrpcError {
-    code: i64,
-    message: String,
-    data: serde_json::Value,
+    pub code: i64,
+    pub message: String,
+    pub data: serde_json::Value,
 }
 
 /// A server-returned error message. Contains a string description as well as a structured value.
