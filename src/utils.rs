@@ -59,8 +59,11 @@ impl<T: RpcService, U: RpcService> RpcService for OrService<T, U> {
     }
 }
 
+/// A FnTransport wraps around a function that directly
+
 /// A FnService wraps around a function that directly implements [Service::call_raw].
 #[allow(clippy::type_complexity)]
+#[derive(Clone)]
 pub struct FnService(
     Arc<
         dyn Fn(
