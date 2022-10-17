@@ -210,7 +210,11 @@ pub trait RpcTransport: Sync + Send + 'static {
                 })))
             }
         } else {
-            panic!("received malformed JrpcResponse from own call_raw")
+            log::error!(
+                "received malformed JrpcResponse from own call_raw: {:?}",
+                result
+            );
+            Ok(None)
         }
     }
 
