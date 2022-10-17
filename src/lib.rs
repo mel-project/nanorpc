@@ -210,11 +210,8 @@ pub trait RpcTransport: Sync + Send + 'static {
                 })))
             }
         } else {
-            log::error!(
-                "received malformed JrpcResponse from own call_raw: {:?}",
-                result
-            );
-            Ok(None)
+            // if both result and error are null, that means that the result is actually null and there is no error
+            Ok(Some(Ok(serde_json::Value::Null)))
         }
     }
 
