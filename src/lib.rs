@@ -160,6 +160,17 @@ pub trait RpcService: Sync + Send + 'static {
     }
 }
 
+#[async_trait]
+impl<T: RpcService + ?Sized> RpcService for Arc<T> {
+    async fn respond(
+        &self,
+        method: &str,
+        params: Vec<serde_json::Value>,
+    ) -> Option<Result<serde_json::Value, ServerError>> {
+        self.as_ref().respond(method, params).await
+    }
+}
+
 /// A client-side nanorpc transport. The only method that needs to be implemented is [`RpcTransport::call_raw`], but clients typically call [`RpcTransport::call`].
 ///
 /// # Example
