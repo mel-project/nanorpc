@@ -57,7 +57,16 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
                         }
                         syn::FnArg::Typed(_) => {
                             let index = idx - offset;
-                            quote! {::serde_json::from_value(__nrpc_args[#index].clone()).unwrap()}
+                            quote! {if let ::std::result::Result::Ok(v) = ::serde_json::from_value(__nrpc_args[#index].clone()) {v} else {
+                                // badly formatted argument
+                                return Some(
+                                    ::std::result::Result::Err(nanorpc::ServerError{
+                                        code: 1,
+                                        message: format!("deserialization of argument {} failed", #index),
+                                        details: ::serde_json::Value::Null
+                                    })
+                                )
+                            }}
                             // TODO handle this properly without a stupid clone
                         }
                     })
@@ -174,7 +183,9 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
     }
 
     // Generate the client implementation
+    let client_type_comment = format!("Automatically generated client type that communicates to servers implementing the [{protocol_name}] protocol. See the [{protocol_name}] trait for further documentation.");
     let client_impl = quote! {
+        #[doc=#client_type_comment]
         pub struct #client_struct_name<T: nanorpc::RpcTransport>(pub T);
 
         impl <__nrpc_T: nanorpc::RpcTransport + Send + Sync + 'static> #client_struct_name<__nrpc_T> {
@@ -182,9 +193,12 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
+    let error_type_comment = format!("Automatically generated error type that {client_struct_name} instances return from its methods");
+    let server_type_comment = format!("Automatically generated struct that wraps any 'business logic' struct implementing [{protocol_name}], and returns a JSON-RPC server implementing [nanorpc::RpcService]. See the [{protocol_name}] trait for further documentation.");
     let assembled = quote! {
         #input_again
 
+        #[doc=#server_type_comment]
         pub struct #server_struct_name<T: #protocol_name>(pub T);
 
         #[::async_trait::async_trait]
@@ -198,6 +212,7 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
         }
 
         #[derive(::thiserror::Error, Debug)]
+        #[doc=#error_type_comment]
         pub enum #error_struct_name<T> {
             #[error("verb not found")]
             NotFound,
