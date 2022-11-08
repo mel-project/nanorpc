@@ -57,7 +57,7 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
                         }
                         syn::FnArg::Typed(_) => {
                             let index = idx - offset;
-                            quote! {if let ::std::result::Result::Ok(v) = ::serde_json::from_value(__nrpc_args[#index].clone()) {v} else {
+                            quote! {if let ::std::option::Option::Some(::std::result::Result::Ok(v)) = __nrpc_args.get(#index).map(|v|::serde_json::from_value(v.clone())) {v} else {
                                 // badly formatted argument
                                 return Some(
                                     ::std::result::Result::Err(nanorpc::ServerError{
