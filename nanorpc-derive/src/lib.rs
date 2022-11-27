@@ -183,10 +183,18 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
     }
 
     // Generate the client implementation
-    let client_type_comment = format!("Automatically generated client type that communicates to servers implementing the [{protocol_name}] protocol. See the [{protocol_name}] trait for further documentation.");
+    let client_type_comment = format!("Automatically generated client type that communicates to servers implementing the [{protocol_name}] protocol. The easiest way to use this is by using the `From<RpcTransport>` implementation. \n\nSee the [{protocol_name}] trait for further documentation on the functionality of the methods..");
     let client_impl = quote! {
         #[doc=#client_type_comment]
-        pub struct #client_struct_name<T: nanorpc::RpcTransport>(pub T);
+        pub struct #client_struct_name<T: nanorpc::RpcTransport = nanorpc::DynRpcTransport>(pub T);
+
+        impl<T: nanorpc::RpcTransport> ::std::convert::From<T> for #client_struct_name
+            where
+            T::Error: Into<::anyhow::Error> {
+            fn from(transport: T) -> Self {
+                Self(nanorpc::DynRpcTransport::new(transport))
+            }
+        }
 
         impl <__nrpc_T: nanorpc::RpcTransport + Send + Sync + 'static> #client_struct_name<__nrpc_T> {
             #client_body
