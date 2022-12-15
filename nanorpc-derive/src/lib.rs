@@ -222,12 +222,19 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
         #[derive(::thiserror::Error, Debug)]
         #[doc=#error_type_comment]
         pub enum #error_struct_name<T> {
+            /// RPC verb not found
             #[error("verb not found")]
             NotFound,
+
+            /// Unexpected server error occurred
             #[error("unexpected server error on an infallible verb")]
             ServerFail,
+
+            /// Failed to decode JSON response
             #[error("failed to decode JSON response: {0}")]
             FailedDecode(::serde_json::Error),
+
+            /// A network transport-level error occurred
             #[error("transport-level error: {0}")]
             Transport(T)
         }
