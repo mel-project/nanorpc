@@ -44,7 +44,7 @@ impl<T: RpcService, U: RpcService> OrService<T, U> {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl<T: RpcService, U: RpcService> RpcService for OrService<T, U> {
     async fn respond(
         &self,

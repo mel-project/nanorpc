@@ -1,12 +1,11 @@
-#[doc = include_str!("../README.md")]
+#![doc = include_str!("../README.md")]
 mod utils;
 pub use utils::*;
-
-use std::sync::Arc;
 
 use async_trait::async_trait;
 pub use nanorpc_derive::nanorpc_derive;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(untagged)]
@@ -52,6 +51,16 @@ pub struct ServerError {
     pub code: u32,
     pub message: String,
     pub details: serde_json::Value,
+}
+
+impl From<JrpcError> for ServerError {
+    fn from(value: JrpcError) -> Self {
+        Self {
+            code: value.code as u32,
+            message: value.message,
+            details: value.data,
+        }
+    }
 }
 
 /// A struct implementing the [`RpcService`] represents the *server-side* logic of a NanoRPC. The method that needs to be *implemented* is [`RpcService::respond`], but actual servers would typically call [`RpcService::respond_raw`].
@@ -202,10 +211,7 @@ pub trait RpcTransport: Sync + Send + 'static {
             jsonrpc: "2.0".into(),
             id: JrpcId::String(reqid),
             method: method.into(),
-            params: params
-                .iter()
-                .map(|s| serde_json::to_value(s).unwrap())
-                .collect(),
+            params: params.to_vec(),
         };
         let result = self.call_raw(req).await?;
         if let Some(res) = result.result {
@@ -214,11 +220,7 @@ pub trait RpcTransport: Sync + Send + 'static {
             if res.code == -32600 {
                 Ok(None)
             } else {
-                Ok(Some(Err(ServerError {
-                    code: res.code as u32,
-                    message: res.message,
-                    details: res.data,
-                })))
+                Ok(Some(Err(res.into())))
             }
         } else {
             // if both result and error are null, that means that the result is actually null and there is no error
@@ -260,10 +262,11 @@ impl<T: RpcTransport + ?Sized> RpcTransport for Box<T> {
 #[cfg(test)]
 mod tests {
     use crate::{self as nanorpc, ServerError};
+    use async_trait::async_trait;
     use nanorpc::{nanorpc_derive, RpcService};
 
     #[nanorpc_derive]
-    #[async_trait::async_trait]
+    #[async_trait]
     pub trait MathProtocol {
         /// Adds two numbers
         async fn add(&self, x: f64, y: f64) -> f64;
@@ -275,7 +278,7 @@ mod tests {
 
     struct Mather;
 
-    #[async_trait::async_trait]
+    #[async_trait]
     impl MathProtocol for Mather {
         async fn add(&self, x: f64, y: f64) -> f64 {
             x + y

@@ -10,37 +10,27 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as ItemTrait);
     let input_again = input.clone();
     let protocol_name = input.ident;
+    let trimmed_name = protocol_name
+        .to_string()
+        .trim_end_matches("Protocol")
+        .to_owned();
+
     if !protocol_name.to_string().ends_with("Protocol") {
         panic!("trait must end with the word \"Protocol\"")
     }
-    let server_struct_name = syn::Ident::new(
-        &format!(
-            "{}Service",
-            protocol_name.to_string().trim_end_matches("Protocol")
-        ),
-        protocol_name.span(),
-    );
-    let client_struct_name = syn::Ident::new(
-        &format!(
-            "{}Client",
-            protocol_name.to_string().trim_end_matches("Protocol")
-        ),
-        protocol_name.span(),
-    );
-    let error_struct_name = syn::Ident::new(
-        &format!(
-            "{}Error",
-            protocol_name.to_string().trim_end_matches("Protocol")
-        ),
-        protocol_name.span(),
-    );
+    let server_struct_name =
+        syn::Ident::new(&format!("{}Service", trimmed_name), protocol_name.span());
+    let client_struct_name =
+        syn::Ident::new(&format!("{}Client", trimmed_name), protocol_name.span());
+    let error_struct_name =
+        syn::Ident::new(&format!("{}Error", trimmed_name), protocol_name.span());
 
     // Generate the server implementation.
     let mut server_match = quote! {};
     let mut client_body = quote! {};
     for item in input.items {
         match item {
-            TraitItem::Method(inner) => {
+            TraitItem::Fn(inner) => {
                 let method_name = inner.sig.ident.clone();
                 // create the block of code needed for calling the function
                 // TODO check that it does in fact take "self"
