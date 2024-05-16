@@ -16,7 +16,7 @@ members = ["nanorpc-derive"]
 
 serde_json = "1.0.117"
 async-trait = "0.1.80"
-serde = { version = "1.0.201", features = ["derive"] }
+serde = { version = "1.0.202", features = ["derive"] }
 fastrand = "2.1.0"
 nanorpc-derive = { version = "0.1.3", path = "nanorpc-derive" }
 thiserror = "1.0.60"
@@ -30,4 +30,4 @@ tokio = { version = "1.37.0", features = ["full"] }
 warp = "0.3.7"
 reqwest = { version = "0.12.4", features = ["json"] }
 smol = "2.0.0"
-clap = { version = "4.5.4", features = ["derive", "env", "cargo"] }
+clap = { version = "4.5.4", features = ["derive", "cargo"] }
