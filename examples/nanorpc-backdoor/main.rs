@@ -1,53 +1,49 @@
 //! A server and client implementation for a "backdoor" protocol that allows clients to run arbitrary commands on the server.
 
-use std::{net::SocketAddr, sync::Arc};
-
-use argh::FromArgs;
+use std::{net::SocketAddr, str::FromStr as _, sync::Arc};
 
 mod protocol;
+use clap::{Parser, Subcommand};
 use nanorpc::{JrpcRequest, RpcService};
 use protocol::*;
 use warp::Filter;
 
 /// Runs a server or client for the JSONRPC-over-HTTP-based backdoor protocol
-#[derive(FromArgs, PartialEq, Debug)]
+#[derive(Parser, PartialEq, Debug)]
 struct Args {
-    #[argh(subcommand)]
+    #[command(subcommand)]
     nested: Subcommands,
 }
 
-#[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand)]
+#[derive(Subcommand, PartialEq, Debug)]
 enum Subcommands {
     Server(ServerArgs),
     Client(ClientArgs),
 }
 
-#[derive(FromArgs, PartialEq, Debug)]
 /// Run a server.
-#[argh(subcommand, name = "server")]
+#[derive(Parser, PartialEq, Debug)]
 struct ServerArgs {
-    /// where to listen for HTTP requests
-    #[argh(option, default = "\"0.0.0.0:11223\".parse().unwrap()")]
+    /// Where to listen for HTTP requests
+    #[arg(short, long, default_value_t = SocketAddr::from_str("0.0.0.0:11223").unwrap())]
     listen: SocketAddr,
 }
 
-#[derive(FromArgs, PartialEq, Debug)]
 /// Run a client.
-#[argh(subcommand, name = "client")]
+#[derive(Parser, PartialEq, Debug)]
 struct ClientArgs {
-    /// where to connect to
-    #[argh(option, default = "\"127.0.0.1:11223\".parse().unwrap()")]
+    /// Where to connect to
+    #[arg(short, long, default_value_t = SocketAddr::from_str("127.0.0.1:11223").unwrap())]
     connect: SocketAddr,
 
-    /// what to send
-    #[argh(positional)]
+    /// What to send
+    #[arg(last = true)]
     commands: Vec<String>,
 }
 
 #[tokio::main]
 async fn main() {
-    let args: Args = argh::from_env();
+    let args = Args::parse();
     match args.nested {
         Subcommands::Server(server) => {
             let service = Arc::new(BackdoorService(BackdoorImpl));
