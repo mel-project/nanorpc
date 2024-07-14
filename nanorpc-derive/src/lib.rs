@@ -226,9 +226,9 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
             NotFound,
             #[error("unexpected server error on an infallible verb")]
             ServerFail,
-            #[error("failed to decode JSON response: {0}")]
+            #[error("failed to decode JSON response: {0:?}")]
             FailedDecode(::serde_json::Error),
-            #[error("transport-level error: {0}")]
+            #[error("transport-level error: {0:?}")]
             Transport(T)
         }
 
