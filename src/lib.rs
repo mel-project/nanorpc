@@ -8,7 +8,7 @@ use async_trait::async_trait;
 pub use nanorpc_derive::nanorpc_derive;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(untagged)]
 /// A raw, JSON-RPC request ID. This should usually never be manually constructed.
 pub enum JrpcId {
