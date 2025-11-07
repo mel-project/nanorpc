@@ -1,10 +1,8 @@
-use async_trait::async_trait;
 use nanorpc::{nanorpc_derive, JrpcRequest, JrpcResponse, RpcTransport};
 use tokio::process::Command;
 
-/// The definition of the backdoor protocol. Note that we need to put `[nanorpc_derive]` before `[async_trait]`.
+/// The definition of the backdoor protocol.
 #[nanorpc_derive]
-#[async_trait]
 pub trait BackdoorProtocol {
     /// Runs a command on the shell, returning the response code and stdout output.
     async fn system(&self, s: String) -> (i32, String);
@@ -13,7 +11,6 @@ pub trait BackdoorProtocol {
 /// Server implementation
 pub struct BackdoorImpl;
 
-#[async_trait]
 impl BackdoorProtocol for BackdoorImpl {
     async fn system(&self, s: String) -> (i32, String) {
         eprintln!("running command {:?}", s);
@@ -45,7 +42,6 @@ impl HttpTransport {
     }
 }
 
-#[async_trait]
 impl RpcTransport for HttpTransport {
     type Error = anyhow::Error;
 

@@ -33,9 +33,8 @@ In particular:
 
 For example:
 
-```rust
+```rust,ignore
 #[nanorpc_derive]
-#[async_trait]
 pub trait MathProtocol {
     /// Adds two numbers. Arguments and return type must be JSON-serializable through `serde_json`
     async fn add(&self, x: f64, y: f64) -> f64;
@@ -46,7 +45,6 @@ pub trait MathProtocol {
 // Autogenerates a server struct:
 pub struct MathService<T: MathProtocol>(pub T);
 
-#[async_trait]
 impl <T: MathService> RpcService for MathService<T> {
     //...
 }
@@ -64,12 +62,12 @@ impl <T: RpcTransport> MathClient {
 
 At the JSON level, the above protocol will respond to a JSON-RPC 2.0 request like:
 
-```
+```json
 {"jsonrpc": "2.0", "method": "mult", "params": [42, 23], "id": 1}
 ```
 
 with
 
-```
+```json
 {"jsonrpc": "2.0", "result": 966, "id": 1}
 ```

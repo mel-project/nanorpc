@@ -1,15 +1,13 @@
 [package]
 name = "nanorpc"
-version = "0.1.13"
-edition = "2021"
-repository="https://github.com/themeliolabs/nanorpc"
-license="ISC"
-description="a subset of JSON-RPC 2.0, with magical autogeneration of servers and clients"
+version = "0.2.0-beta.0"
+edition = "2024"
+repository = "https://github.com/themeliolabs/nanorpc"
+license = "ISC"
+description = "a subset of JSON-RPC 2.0, with magical autogeneration of servers and clients"
 
 [workspace]
-members = [
-    "nanorpc-derive",
-]
+members = ["nanorpc-derive"]
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -17,19 +15,17 @@ members = [
 [dependencies]
 
 serde_json = "1.0.87"
-async-trait = "0.1.58"
 serde = { version = "1.0.147", features = ["derive"] }
 fastrand = "1.8.0"
 nanorpc-derive = { version = "0.1.6", path = "nanorpc-derive" }
 thiserror = "1.0.37"
 anyhow = "1.0.66"
-futures-lite = "1.12.0"
 log = "0.4.17"
 
 [dev-dependencies]
-anyhow= "1.0.66"
-tokio={ version = "1.21.2", features = ["full"] }
-argh= "0.1.9"
-warp= "0.3.3"
-reqwest={ version = "0.11.12", features = ["json"] }
+anyhow = "1.0.66"
+tokio = { version = "1.21.2", features = ["full"] }
+argh = "0.1.9"
+warp = "0.3.3"
+reqwest = { version = "0.11.12", features = ["json"] }
 smol = "1.2.5"

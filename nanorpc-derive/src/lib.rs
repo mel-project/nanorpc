@@ -3,7 +3,7 @@ use quote::{quote, ToTokens};
 use syn::{parse_macro_input, spanned::Spanned, ItemTrait, ReturnType, TraitItem, Type};
 
 #[proc_macro_attribute]
-/// This procedural macro should be put on top of a `async_trait` trait with name ending in `...Protocol`, defining all the function signatures in the RPC protocol. Given a trait of name `FooProtocol`, the macro
+/// This procedural macro should be put on top of an async trait with name ending in `...Protocol`, defining all the function signatures in the RPC protocol. Given a trait of name `FooProtocol`, the macro
 /// - automatically derives an `nanorpc::RpcService` implementation for `FooService`, a generated type that wraps around anything that implements `FooProtocol` --- these would be types that are server implementations of the protocol.
 /// - automatically generates `FooClient`, a client-side struct that wraps a `nanorpc::RpcTransport` and has methods mirroring `FooProtocol`.
 pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
@@ -190,7 +190,7 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
 
         impl<T: nanorpc::RpcTransport> ::std::convert::From<T> for #client_struct_name
             where
-            T::Error: Into<::anyhow::Error> {
+            T::Error: Into<nanorpc::__macro_reexports::anyhow::Error> {
             fn from(transport: T) -> Self {
                 Self(nanorpc::DynRpcTransport::new(transport))
             }
@@ -209,7 +209,6 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
         #[doc=#server_type_comment]
         pub struct #server_struct_name<T: #protocol_name>(pub T);
 
-        #[::async_trait::async_trait]
         impl <__nrpc_T: #protocol_name + ::std::marker::Sync + ::std::marker::Send + 'static> nanorpc::RpcService for #server_struct_name<__nrpc_T> {
             async fn respond(&self, __nrpc_method: &str, __nrpc_args: Vec<::serde_json::Value>) -> Option<Result<::serde_json::Value, nanorpc::ServerError>> {
                 match __nrpc_method {
@@ -219,7 +218,7 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
             }
         }
 
-        #[derive(::thiserror::Error, Debug)]
+        #[derive(nanorpc::__macro_reexports::thiserror::Error, Debug)]
         #[doc=#error_type_comment]
         pub enum #error_struct_name<T> {
             #[error("verb not found")]
