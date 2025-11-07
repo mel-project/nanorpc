@@ -1,10 +1,10 @@
 [package]
 name = "nanorpc-derive"
-version = "0.1.6"
+version.workspace = true
 edition = "2021"
-repository="https://github.com/themeliolabs/nanorpc"
-license="ISC"
-description="macros for nanorpc"
+repository = "https://github.com/themeliolabs/nanorpc"
+license = "ISC"
+description = "macros for nanorpc"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

@@ -1,6 +1,6 @@
 [package]
 name = "nanorpc"
-version = "0.2.0-beta.0"
+version.workspace = true
 edition = "2024"
 repository = "https://github.com/themeliolabs/nanorpc"
 license = "ISC"
@@ -8,6 +8,9 @@ description = "a subset of JSON-RPC 2.0, with magical autogeneration of servers 
 
 [workspace]
 members = ["nanorpc-derive"]
+
+[workspace.package]
+version = "0.2.0-beta.0"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -17,7 +20,7 @@ members = ["nanorpc-derive"]
 serde_json = "1.0.87"
 serde = { version = "1.0.147", features = ["derive"] }
 fastrand = "1.8.0"
-nanorpc-derive = { version = "0.1.6", path = "nanorpc-derive" }
+nanorpc-derive = { version = "0.2.0-beta.0", path = "nanorpc-derive" }
 thiserror = "1.0.37"
 anyhow = "1.0.66"
 log = "0.4.17"
