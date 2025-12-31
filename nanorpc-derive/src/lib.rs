@@ -57,7 +57,7 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
                         }
                         syn::FnArg::Typed(_) => {
                             let index = idx - offset;
-                            quote! {if let ::std::option::Option::Some(::std::result::Result::Ok(v)) = __nrpc_args.get(#index).map(|v|::serde_json::from_value(v.clone())) {v} else {
+                            quote! {if let ::std::option::Option::Some(::std::result::Result::Ok(v)) = __nrpc_args.get(#index).map(|v| nanorpc::__macro_reexports::serde_json::from_value(v.clone())) {v} else {
                                 // badly formatted argument
                                 return Some(
                                     ::std::result::Result::Err(nanorpc::ServerError{
@@ -87,11 +87,11 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
                         #server_match
                         #method_name_str => {
                             let raw = #protocol_name::#method_name(#method_call).await;
-                            let ok_mapped = raw.map(|o| ::serde_json::to_value(o).expect("serialization failed"));
+                            let ok_mapped = raw.map(|o| nanorpc::__macro_reexports::serde_json::to_value(o).expect("serialization failed"));
                             let err_mapped = ok_mapped.map_err(|e| nanorpc::ServerError{
                                 code: 1,
                                 message: e.to_string(),
-                                details: ::serde_json::to_value(e).expect("serialization failed")
+                                details: nanorpc::__macro_reexports::serde_json::to_value(e).expect("serialization failed")
                             });
                             ::std::option::Option::Some(err_mapped)
                         }
@@ -100,7 +100,7 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
                     server_match = quote! {
                         #server_match
                         #method_name_str => {
-                            ::std::option::Option::Some(::std::result::Result::Ok(::serde_json::to_value(#protocol_name::#method_name(#method_call).await).expect("serialization failed")))
+                            ::std::option::Option::Some(::std::result::Result::Ok(nanorpc::__macro_reexports::serde_json::to_value(#protocol_name::#method_name(#method_call).await).expect("serialization failed")))
                         }
                     };
                 }
@@ -124,14 +124,14 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
                         syn::FnArg::Receiver(_) => None,
                         syn::FnArg::Typed(t) => match t.pat.as_ref() {
                             syn::Pat::Ident(varname) => {
-                                Some(quote! {__vb.push(::serde_json::to_value(&#varname).unwrap())})
+                                Some(quote! {__vb.push(nanorpc::__macro_reexports::serde_json::to_value(&#varname).unwrap())})
                             }
                             v => panic!("wild {:?}", v.to_token_stream()),
                         },
                     })
                     .fold(
                         quote! {
-                            let mut __vb: ::std::vec::Vec<::serde_json::Value> = ::std::vec::Vec::with_capacity(8);
+                            let mut __vb: ::std::vec::Vec<nanorpc::__macro_reexports::serde_json::Value> = ::std::vec::Vec::with_capacity(8);
                         },
                         |a, b| quote! {#a; #b},
                     );
@@ -140,11 +140,11 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
                     quote! {
                         match jsval  {
                             Ok(jsval) => {
-                                let retval = ::serde_json::from_value(jsval).map_err(#error_struct_name::FailedDecode)?;
+                                let retval = nanorpc::__macro_reexports::serde_json::from_value(jsval).map_err(#error_struct_name::FailedDecode)?;
                                 Ok(Ok(retval))
                             }
                             Err(serverr) => {
-                                Ok(Err(::serde_json::from_value(serverr.details).map_err(#error_struct_name::FailedDecode)?))
+                                Ok(Err(nanorpc::__macro_reexports::serde_json::from_value(serverr.details).map_err(#error_struct_name::FailedDecode)?))
                             }
                         }
                     }
@@ -152,7 +152,7 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
                     quote! {
                         match jsval  {
                             Ok(jsval) => {
-                                let retval: #original_output = ::serde_json::from_value(jsval).map_err(#error_struct_name::FailedDecode)?;
+                                let retval: #original_output = nanorpc::__macro_reexports::serde_json::from_value(jsval).map_err(#error_struct_name::FailedDecode)?;
                                 Ok(retval)
                             }
                             Err(serverr) => {
@@ -210,7 +210,7 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
         pub struct #server_struct_name<T: #protocol_name>(pub T);
 
         impl <__nrpc_T: #protocol_name + ::std::marker::Sync + ::std::marker::Send + 'static> nanorpc::RpcService for #server_struct_name<__nrpc_T> {
-            async fn respond(&self, __nrpc_method: &str, __nrpc_args: Vec<::serde_json::Value>) -> Option<Result<::serde_json::Value, nanorpc::ServerError>> {
+            async fn respond(&self, __nrpc_method: &str, __nrpc_args: Vec<nanorpc::__macro_reexports::serde_json::Value>) -> Option<Result<nanorpc::__macro_reexports::serde_json::Value, nanorpc::ServerError>> {
                 match __nrpc_method {
                 #server_match
                 _ => {None}
@@ -226,7 +226,7 @@ pub fn nanorpc_derive(_: TokenStream, input: TokenStream) -> TokenStream {
             #[error("unexpected server error on an infallible verb")]
             ServerFail,
             #[error("failed to decode JSON response: {0:?}")]
-            FailedDecode(::serde_json::Error),
+            FailedDecode(nanorpc::__macro_reexports::serde_json::Error),
             #[error("transport-level error: {0:?}")]
             Transport(T)
         }

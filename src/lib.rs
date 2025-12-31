@@ -9,20 +9,26 @@ pub use nanorpc_derive::nanorpc_derive;
 #[doc(hidden)]
 pub mod __macro_reexports {
     pub use anyhow;
+    pub use serde_json;
     pub use thiserror;
 }
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(untagged)]
-/// A raw, JSON-RPC request ID. This should usually never be manually constructed.
+/// A raw JSON-RPC request ID.
+///
+/// JSON-RPC allows numeric or string IDs. In most cases you should let
+/// [`RpcTransport::call`] generate these for you.
 pub enum JrpcId {
     Number(i64),
     String(String),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-/// A raw, JSON-RPC request. This should usually never be manually constructed.
+/// A raw JSON-RPC request.
+///
+/// Prefer `RpcTransport::call` when constructing requests from Rust types.
 pub struct JrpcRequest {
     pub jsonrpc: String,
     pub method: String,
@@ -31,7 +37,11 @@ pub struct JrpcRequest {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-/// A raw, JSON-RPC response. This should usually never be manually constructed.
+/// A raw JSON-RPC response.
+///
+/// The JSON-RPC spec allows either `result` or `error` to be present.
+/// In this crate, both may be `None` to represent a successful response
+/// with a JSON `null` result.
 pub struct JrpcResponse {
     pub jsonrpc: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -44,14 +54,19 @@ pub struct JrpcResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-/// A raw, JSON-RPC error. This should usually never be manually constructed.
+/// A raw JSON-RPC error.
+///
+/// This mirrors the error object defined by the JSON-RPC 2.0 spec.
 pub struct JrpcError {
     pub code: i64,
     pub message: String,
     pub data: serde_json::Value,
 }
 
-/// A server-returned error message. Contains a string description as well as a structured value.
+/// A server-returned error message.
+///
+/// When you implement [`RpcService::respond`], return `Err(ServerError { .. })`
+/// to indicate that the method exists but failed to execute.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ServerError {
     pub code: u32,
@@ -59,7 +74,12 @@ pub struct ServerError {
     pub details: serde_json::Value,
 }
 
-/// A struct implementing the [`RpcService`] represents the *server-side* logic of a NanoRPC. The method that needs to be *implemented* is [`RpcService::respond`], but actual servers would typically call [`RpcService::respond_raw`].
+/// Server-side RPC logic.
+///
+/// Implementors map a method name plus JSON values into either a JSON value
+/// (success), a [`ServerError`] (method failed), or `None` (method not found).
+/// In practice, you usually implement [`RpcService::respond`] directly and call
+/// [`RpcService::respond_raw`] from a transport layer.
 ///
 /// This trait is defined using Rust's native async trait support. [`RpcService`] has this definition:
 ///
@@ -108,7 +128,10 @@ pub struct ServerError {
 ///     Ok(serde_json::to_vec(&response).unwrap())
 /// }
 pub trait RpcService: Sync + Send + 'static {
-    /// Responds to an RPC call with method `str` and dynamically typed arguments `args`. The service should return `None` to indicate that this method does not exist at all.
+    /// Responds to an RPC call with method name and positional arguments.
+    ///
+    /// Return `None` to indicate the method does not exist. Returning
+    /// `Some(Err(_))` indicates the method exists but failed at runtime.
     async fn respond(
         &self,
         method: &str,
@@ -116,6 +139,9 @@ pub trait RpcService: Sync + Send + 'static {
     ) -> Option<Result<serde_json::Value, ServerError>>;
 
     /// Responds to a raw JSON-RPC request, returning a raw JSON-RPC response.
+    ///
+    /// This default implementation handles version checks, method lookup,
+    /// and error mapping.
     async fn respond_raw(&self, jrpc_req: JrpcRequest) -> JrpcResponse {
         if jrpc_req.jsonrpc != "2.0" {
             JrpcResponse {
@@ -172,7 +198,11 @@ impl<T: RpcService + ?Sized> RpcService for Arc<T> {
     }
 }
 
-/// A client-side nanorpc transport. The only method that needs to be implemented is [`RpcTransport::call_raw`], but clients typically call [`RpcTransport::call`].
+/// Client-side transport for sending JSON-RPC requests.
+///
+/// Implement [`RpcTransport::call_raw`] to define how raw JSON-RPC requests are
+/// sent to the server (HTTP, TCP, in-process, etc.). Most callers should use
+/// [`RpcTransport::call`], which handles request IDs and JSON mapping.
 ///
 /// # Example
 ///
@@ -191,7 +221,10 @@ pub trait RpcTransport: Sync + Send + 'static {
     /// This error type represents *transport-level* errors, like communication errors and such.
     type Error: Sync + Send + 'static;
 
-    /// Sends an RPC call to the remote side, returning the result. `Ok(None)` means that there is no transport-level error, but that the verb does not exist. This generally does not need a manual implementation.
+    /// Sends an RPC call to the remote side, returning the result.
+    ///
+    /// `Ok(None)` means that there is no transport-level error, but the method
+    /// does not exist. This generally does not need a manual implementation.
     async fn call(
         &self,
         method: &str,
@@ -226,7 +259,7 @@ pub trait RpcTransport: Sync + Send + 'static {
         }
     }
 
-    /// Sends an RPC call to the remote side, as a raw JSON-RPC request, receiving a raw JSON-RPC response.
+    /// Sends an RPC call to the remote side as a raw JSON-RPC request.
     async fn call_raw(&self, req: JrpcRequest) -> Result<JrpcResponse, Self::Error>;
 }
 
